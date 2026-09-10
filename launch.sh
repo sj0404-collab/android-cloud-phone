@@ -72,8 +72,9 @@ stop_old() {
 }
 
 start_xvfb() {
-  log "Starting Xvfb on $DISPLAY_NUM (1920x1080)..."
-  Xvfb $DISPLAY_NUM -screen 0 1920x1080x24 &>/dev/null &
+  local scr="${RESOLUTION%x*}x${RESOLUTION#*x}x24"
+  log "Starting Xvfb on $DISPLAY_NUM ($RESOLUTION)..."
+  Xvfb $DISPLAY_NUM -screen 0 "$scr" &>/dev/null &
   sleep 1
   export DISPLAY=$DISPLAY_NUM
   log "Xvfb started"
@@ -174,8 +175,8 @@ start_emulator() {
   if [ -w /dev/kvm ] 2>/dev/null; then
     :
   elif command -v sg >/dev/null; then
-    sg kvm -c "$EMULATOR -avd $AVD_NAME -no-window -no-audio \
-      -gpu swiftshader_indirect -no-boot-anim -no-snapshot \
+    sg kvm -c "$EMULATOR -avd $AVD_NAME -no-audio \
+      -gpu swiftshader_indirect -feature -Vulkan -no-boot-anim -no-snapshot \
       -port 5554 -skin $RESOLUTION" &>/dev/null &
     sleep 2
     return
@@ -183,8 +184,8 @@ start_emulator() {
     warn "No KVM access, emulator may be slow"
   fi
 
-  $EMULATOR -avd $AVD_NAME -no-window -no-audio \
-    -gpu swiftshader_indirect -no-boot-anim -no-snapshot \
+  $EMULATOR -avd $AVD_NAME -no-audio \
+    -gpu swiftshader_indirect -feature -Vulkan -no-boot-anim -no-snapshot \
     -port 5554 -skin $RESOLUTION &>/dev/null &
   sleep 2
 }
