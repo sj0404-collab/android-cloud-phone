@@ -1,14 +1,16 @@
 package com.cloudphone.launcher;
 
 import android.annotation.SuppressLint;
-import android.app.Activity;
 import android.app.DownloadManager;
+import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Process;
+import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
 import android.webkit.CookieManager;
@@ -29,18 +31,23 @@ import android.widget.Toast;
 
 import androidx.activity.ComponentActivity;
 import androidx.activity.OnBackPressedCallback;
+import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 
 import org.json.JSONObject;
 
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 
 /**
  * Cloud Phone shell, the same shape as the NPM Hub APK: no buttons in the
  * native UI. A connect page is served from inside the APK (assets/connect),
  * it knows the server address and sends this WebView to the noVNC page.
- * Everything after that is the phone in a browser. App chrome is only a
- * progress bar and an error page with retry / change-server.
+ * The only chrome is a progress bar and an error page with
+ * retry / change-server. A crash reporter writes any uncaught exception to
+ * files/crash.txt and the error page shows it, so failures are diagnosable.
  */
 public class MainActivity extends ComponentActivity {
 
@@ -49,6 +56,7 @@ public class MainActivity extends ComponentActivity {
     private static final String CONNECT_SETUP_URL = CONNECT_URL + "?setup=1";
     private static final String PREFS = "cloud_phone";
     private static final String KEY_SERVER = "server_url";
+    private static final String CRASH_FILE = "crash.txt";
     private static final int BG = Color.parseColor("#0d0d12");
     private static final int FG = Color.parseColor("#e8e8f0");
     private static final int MUTED = Color.parseColor("#8a8a9e");
@@ -56,22 +64,26 @@ public class MainActivity extends ComponentActivity {
     private WebView web;
     private ProgressBar bar;
     private LinearLayout errorView;
+    private TextView crashInfo;
 
     private ValueCallback<Uri[]> fileChooser;
-    private final ActivityResultContracts.StartActivityForResult pickerContract =
-            new ActivityResultContracts.StartActivityForResult();
-
-    private final androidx.activity.result.ActivityResultLauncher<Intent> filePicker =
-            registerForActivityResult(pickerContract, res -> {
-                Uri[] uris = WebChromeClient.FileChooserParams.parseResult(res.getResultCode(), res.getData());
-                fileChooser.onReceiveValue(uris == null ? new Uri[0] : uris);
-                fileChooser = null;
-            });
+    private ActivityResultLauncher<Intent> filePicker;
 
     @SuppressLint("SetJavaScriptEnabled")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        installCrashReporter();
+
+        filePicker = registerForActivityResult(
+                new ActivityResultContracts.StartActivityForResult(), res -> {
+                    if (fileChooser != null) {
+                        Uri[] uris = WebChromeClient.FileChooserParams
+                                .parseResult(res.getResultCode(), res.getData());
+                        fileChooser.onReceiveValue(uris == null ? new Uri[0] : uris);
+                        fileChooser = null;
+                    }
+                });
 
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
@@ -98,11 +110,39 @@ public class MainActivity extends ComponentActivity {
         configureWebView();
         registerBackHandler();
 
-        if (savedInstanceState == null) {
-            String saved = serverUrl();
-            web.loadUrl(saved == null || saved.isEmpty() ? CONNECT_URL : saved);
-        } else {
-            web.restoreState(savedInstanceState);
+        try {
+            if (savedInstanceState == null) {
+                String saved = serverUrl();
+                web.loadUrl(saved == null || saved.isEmpty() ? CONNECT_URL : saved);
+            } else {
+                web.restoreState(savedInstanceState);
+            }
+        } catch (Exception e) {
+            showError("Ошибка запуска: " + e);
+        }
+    }
+
+    private void installCrashReporter() {
+        final File logFile = new File(getFilesDir(), CRASH_FILE);
+        Thread.setDefaultUncaughtExceptionHandler((t, e) -> {
+            try (FileOutputStream fos = new FileOutputStream(logFile)) {
+                String s = "Thread: " + t.getName() + "\n" +
+                        Log.getStackTraceString(e);
+                fos.write(s.getBytes(StandardCharsets.UTF_8));
+            } catch (Exception ignored) {
+            }
+            Process.killProcess(Process.myPid());
+            System.exit(2);
+        });
+    }
+
+    private String crashReport() {
+        try (InputStream is = openFileInput(CRASH_FILE)) {
+            byte[] b = new byte[is.available()];
+            int r = is.read(b);
+            return r > 0 ? new String(b, StandardCharsets.UTF_8) : null;
+        } catch (Exception e) {
+            return null;
         }
     }
 
@@ -164,7 +204,7 @@ public class MainActivity extends ComponentActivity {
 
             @Override
             public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
-                if (request.isForMainFrame()) showError();
+                if (request.isForMainFrame()) showError(null);
             }
 
             @Override
@@ -229,18 +269,9 @@ public class MainActivity extends ComponentActivity {
         v.setLayoutParams(new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 
-        v.addView(new TextView(this) {{
-            setText("Телефон не открылся");
-            setTextColor(FG);
-            setTextSize(19f);
-        }});
-        v.addView(new TextView(this) {{
-            setText("Проверьте адрес сервера и сеть. Если cloud-phone только запустился — " +
-                    "подождите минуту: noVNC поднимается после загрузки Android.");
-            setTextColor(MUTED);
-            setTextSize(14f);
-            setPadding(0, 16, 0, 24);
-        }});
+        v.addView(makeText("Телефон не открылся", 19f, FG));
+        v.addView(makeText("Проверьте адрес сервера и сеть. Если cloud-phone только запустился — " +
+                "подождите минуту: noVNC поднимается после загрузки Android.", 14f, MUTED, 0, 16, 0, 24));
 
         Button retry = new Button(this);
         retry.setText("Повторить");
@@ -263,13 +294,53 @@ public class MainActivity extends ComponentActivity {
         });
         v.addView(change);
 
+        crashInfo = makeText("", 11f, Color.parseColor("#ffb3b3"), 24, 12, 0, 0);
+        crashInfo.setVisibility(View.GONE);
+        v.addView(crashInfo);
+
+        Button copy = new Button(this);
+        copy.setText("Скопировать журнал");
+        copy.setVisibility(View.GONE);
+        copy.setOnClickListener(view -> {
+            String s = crashReport();
+            if (s == null) return;
+            ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+            cm.setPrimaryClip(ClipData.newPlainText("Cloud Phone crash", s));
+            Toast.makeText(this, "Журнал скопирован", Toast.LENGTH_SHORT).show();
+        });
+        v.addView(copy);
+
+        String cr = crashReport();
+        if (cr != null && !cr.isEmpty()) {
+            crashInfo.setText("Журнал прошлого краша:\n" + cr);
+            crashInfo.setVisibility(View.VISIBLE);
+            copy.setVisibility(View.VISIBLE);
+        }
+
         return v;
     }
 
-    private void showError() {
+    private TextView makeText(String text, float size, int color) {
+        return makeText(text, size, color, 0, 0, 0, 0);
+    }
+
+    private TextView makeText(String text, float size, int color, int pl, int pt, int pr, int pb) {
+        TextView t = new TextView(this);
+        t.setText(text);
+        t.setTextColor(color);
+        t.setTextSize(size);
+        t.setPadding(pl, pt, pr, pb);
+        return t;
+    }
+
+    private void showError(String detail) {
         web.setVisibility(View.GONE);
         errorView.setVisibility(View.VISIBLE);
         bar.setVisibility(View.GONE);
+        if (detail != null) {
+            crashInfo.setText(detail);
+            crashInfo.setVisibility(View.VISIBLE);
+        }
     }
 
     private void registerBackHandler() {
