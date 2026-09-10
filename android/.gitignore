@@ -1,13 +1,9 @@
-*.log
-*.pid
-/tmp/
-
-# Android APK wrapper build artifacts
 local.properties
 .gradle/
 build/
 app/build/
 *.apk
+*.idsig
 *.jks
 *.keystore
 .idea/

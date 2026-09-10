@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- glow behind -->
+    <path
+        android:pathData="M54,4 a50,50 0 1 1 0,100 a50,50 0 1 1 0,-100"
+        android:fillColor="#335D79FF" />
+
+    <!-- phone body -->
+    <path
+        android:pathData="M16,6 h76 a16,16 0 0 1 16,16 v64 a16,16 0 0 1 -16,16 h-76 a16,16 0 0 1 -16,-16 v-64 a16,16 0 0 1 16,-16 z"
+        android:fillColor="#232A4A"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="1"
+        android:strokeAlpha="0.22" />
+
+    <!-- screen -->
+    <path
+        android:pathData="M22,12 h64 a10,10 0 0 1 10,10 v64 a10,10 0 0 1 -10,10 h-64 a10,10 0 0 1 -10,-10 v-64 a10,10 0 0 1 10,-10 z"
+        android:fillColor="#10142B" />
+
+    <!-- screen glow dot -->
+    <path
+        android:pathData="M54,20 a28,28 0 1 1 0,56 a28,28 0 1 1 0,-56"
+        android:fillColor="#225D79FF" />
+
+    <!-- orbit ring -->
+    <path
+        android:pathData="M96,54 a42,42 0 1 1 -84,0 a42,42 0 1 1 84,0"
+        android:strokeColor="#7C9AFF"
+        android:strokeWidth="1.4"
+        android:fillColor="#00000000"
+        android:strokeAlpha="0.75" />
+
+    <!-- android head -->
+    <path
+        android:pathData="M34,30 h40 a10,10 0 0 1 10,10 v0 a10,10 0 0 1 -10,10 h-40 a10,10 0 0 1 -10,-10 v0 a10,10 0 0 1 10,-10 z"
+        android:fillColor="#5D79FF" />
+
+    <!-- antennas -->
+    <path
+        android:pathData="M40,32 v-6 M68,32 v-6"
+        android:strokeColor="#8FA4FF"
+        android:strokeWidth="2.6"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000" />
+
+    <!-- eyes -->
+    <path
+        android:pathData="M42,40 a2.2,2.2 0 1 1 4.4,0 a2.2,2.2 0 1 1 -4.4,0"
+        android:fillColor="#FFFFFF" />
+    <path
+        android:pathData="M62,40 a2.2,2.2 0 1 1 4.4,0 a2.2,2.2 0 1 1 -4.4,0"
+        android:fillColor="#FFFFFF" />
+
+    <!-- body -->
+    <path
+        android:pathData="M38,51 h32 a7,7 0 0 1 7,7 v4 a7,7 0 0 1 -7,7 h-32 a7,7 0 0 1 -7,-7 v-4 a7,7 0 0 1 7,-7 z"
+        android:fillColor="#7C9AFF" />
+
+    <!-- sparkles -->
+    <path
+        android:pathData="M84,22 a2,2 0 1 1 4,0 a2,2 0 1 1 -4,0"
+        android:fillColor="#C7D6FF" />
+    <path
+        android:pathData="M20,78 a2,2 0 1 1 4,0 a2,2 0 1 1 -4,0"
+        android:fillColor="#C7D6FF" />
+    <path
+        android:pathData="M72,88 a1.6,1.6 0 1 1 3.2,0 a1.6,1.6 0 1 1 -3.2,0"
+        android:fillColor="#8FA4FF" />
+</vector>

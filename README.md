@@ -22,9 +22,28 @@ chmod +x install_deps.sh launch.sh
 
 | Layer | Component |
 |---|---|
-| Display | Xvfb virtual framebuffer (1920x1080) |
+| Display | Xvfb virtual framebuffer (resolves to device resolution, default 1080x2400) |
 | Android | Emulator — Pixel 7, Android 14, x86_64, KVM-accelerated |
 | VNC | x11vnc (port 5900) + noVNC web client (port 6080) |
+
+## Android APK Launcher
+
+Grab `CloudPhone-1.0.0-release.apk` from the latest GitHub Release — a signed Android wrapper with cover screen. It connects to the noVNC page of a running cloud-phone:
+
+1. Set the server address (Settings → Сервер): `http://<host>:6080/vnc.html`
+2. Tap **Запустить** — full-screen noVNC client, touch/keyboard support, black immersive UI.
+
+Build yourself:
+
+```bash
+cd android
+./gradlew :app:assembleRelease   # unsigned app-release-unsigned.apk
+# sign with your own key:
+zipalign -f -p 4 app/build/outputs/apk/release/app-release-unsigned.apk aligned.apk
+apksigner sign --ks <your.keystore> --out CloudPhone-release.apk aligned.apk
+```
+
+The official release keystore is kept private and is NOT in this repository.
 
 ## Requirements
 
