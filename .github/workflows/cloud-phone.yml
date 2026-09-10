@@ -1,0 +1,78 @@
+name: Cloud Phone Runner
+
+on:
+  workflow_dispatch:
+    inputs:
+      command:
+        description: 'Action for the cloud-phone runner'
+        required: true
+        default: start
+        type: choice
+        options:
+          - start
+          - stop
+          - status
+      auto_connect:
+        description: 'Auto-open the noVNC site in the runner browser (needs a graphical DISPLAY)'
+        required: false
+        default: true
+        type: boolean
+
+permissions:
+  contents: read
+  actions: write
+
+concurrency:
+  group: cloud-phone
+  cancel-in-progress: false
+
+jobs:
+  phone:
+    runs-on: [self-hosted, linux, x64]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Execute command
+        id: control
+        env:
+          CMD: ${{ inputs.command }}
+        run: |
+          chmod +x launch.sh scripts/control.sh
+          bash scripts/control.sh "$CMD" | tee /tmp/control.out
+          echo "URL=$(grep -oE 'http://[^ ]+' /tmp/control.out | head -1)" >> "$GITHUB_OUTPUT"
+
+      - name: Auto-connect to site
+        if: inputs.command == 'start'
+        env:
+          URL: ${{ steps.control.outputs.URL }}
+          GHTOK: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
+        run: |
+          {
+            echo "## 🌐 Cloud Phone is live"
+            echo ""
+            echo "- **noVNC**: [${URL:?no URL detected}](${URL})"
+            echo "- **VNC**: port 5900 · **ADB**: port 5555"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          # auto-open in the runner's own browser if a GUI is present
+          if [ "${{ inputs.auto_connect }}" = "true" ] && [ -n "${DISPLAY:-}" ] && command -v xdg-open >/dev/null; then
+            xdg-open "$URL" || true
+          fi
+
+          # verify the site responds
+          if curl -sf --max-time 10 "$URL" >/dev/null; then
+            echo "✓ Site reachable"
+          else
+            echo "! Site not reachable yet (emulator still booting)"
+          fi
+
+      - name: Pin URL on the run
+        if: inputs.command == 'start'
+        env:
+          URL: ${{ steps.control.outputs.URL }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
+        run: |
+          gh api "/repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
+            --method PATCH --field name="Cloud Phone: ${URL}" >/dev/null
+          echo "Run renamed to: Cloud Phone: ${URL}"

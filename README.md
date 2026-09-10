@@ -75,6 +75,30 @@ docker build -t android-cloud-phone .
 docker run --privileged -p 6080:6080 -p 5900:5900 android-cloud-phone
 ```
 
+## GitHub Actions — Manual Runner Control
+
+The repo ships with a workflow that runs the cloud phone on a **self-hosted runner** and gives you clickable **Run workflow** buttons on GitHub:
+
+| Input | Effect |
+|---|---|
+| `start` | Boots the phone in background, shows the noVNC link in the run summary, renames the run to the URL, and (optionally) auto-opens the site in the runner browser |
+| `stop` | Kills emulator / Xvfb / x11vnc / websockify |
+| `status` | Reports if the phone is up and prints its URL |
+
+Setup once:
+
+1. Register this machine as a self-hosted runner (`runs-on: [self-hosted, linux, x64]`).
+2. Add a GitHub token as a repo secret named **`GH_TOKEN`** (Settings → Secrets and variables → Actions), e.g. a fine-grained PAT with `actions: write` + `contents: read`. The built-in `GITHUB_TOKEN` is used as fallback.
+3. In **Actions → Cloud Phone Runner → Run workflow**, pick the command. The URL is pinned to the run name and printed in the summary (auto-connect).
+
+Local control (same commands, no GitHub):
+
+```bash
+bash scripts/control.sh start    # boot + print URL
+bash scripts/control.sh status
+bash scripts/control.sh stop
+```
+
 ## Troubleshooting
 
 **No KVM** → emulator falls back to software (slow). Ensure `/dev/kvm` exists and user is in `kvm` group.
