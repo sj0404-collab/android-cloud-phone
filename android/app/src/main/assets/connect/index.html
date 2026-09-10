@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0d0d12">
+<title>Cloud Phone — запуск</title>
+<style>
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body { margin:0; }
+  body { background:#0d0d12; color:#e8e8f0;
+         font:15px/1.5 -apple-system,"Segoe UI",Roboto,sans-serif;
+         min-height:100%; padding:24px 16px 40px; overscroll-behavior:none; }
+  .wrap { max-width:460px; margin:0 auto; }
+  .logo { font-size:26px; font-weight:800; text-align:center;
+          background:linear-gradient(135deg,#58a6ff,#bc8cff);
+          -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+  .logo small { display:block; font-size:12px; font-weight:600; color:#8a8a9e;
+                -webkit-text-fill-color:#8a8a9e; letter-spacing:2px; }
+  .sub { font-size:13px; color:#8a8a9e; text-align:center; margin:2px 0 18px; }
+
+  .card { background:#16161f; border:1px solid #262633; border-radius:12px; padding:16px; }
+  label { display:block; font-size:13px; color:#8a8a9e; margin-bottom:12px; }
+  input { display:block; width:100%; margin-top:6px; padding:13px 14px; font:inherit;
+          color:#e8e8f0; background:#0d0d12; border:1px solid #30363d; border-radius:10px; outline:none; }
+  input:focus { border-color:#58a6ff; }
+  button { display:block; width:100%; font:inherit; font-weight:700; border:0; border-radius:10px;
+           padding:14px; margin:8px 0 0; cursor:pointer; background:#58a6ff; color:#0d0d12; min-height:50px; }
+  button.ghost { background:transparent; color:#58a6ff; border:1px solid #30363d; font-weight:600; }
+  button:disabled { opacity:.45; }
+  .auto { display:none; text-align:center; padding:34px 0 22px; }
+  .auto .spin { display:inline-block; width:26px; height:26px; border:3px solid #30363d;
+                border-top-color:#58a6ff; border-radius:50%;
+                animation:sp 0.9s linear infinite; margin-bottom:12px; }
+  @keyframes sp { to { transform:rotate(360deg); } }
+  .auto .srv { color:#58a6ff; font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+               font-size:13px; word-break:break-all; margin-top:8px; }
+  .chg { color:#8a8a9e; font-size:12px; text-decoration:underline; cursor:pointer; text-underline-offset:2px; }
+  .note { font-size:12px; color:#55555f; margin-top:16px; text-align:center; }
+  .err { color:#ff7b72; font-size:12px; margin-top:10px; display:none; }
+  .art { text-align:center; margin:6px 0 14px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="art">
+    <svg width="86" height="86" viewBox="0 0 108 108" fill="none">
+      <circle cx="54" cy="54" r="50" fill="#1a1a26"/>
+      <path d="M96,54 a42,42 0 1 1 -84,0 a42,42 0 1 1 84,0" stroke="#7c9aff" stroke-width="1.4" stroke-opacity=".8"/>
+      <path d="M34,30 h40 a10,10 0 0 1 10,10 v0 a10,10 0 0 1 -10,10 h-40 a10,10 0 0 1 -10,-10 v0 a10,10 0 0 1 10,-10 z" fill="#5d79ff"/>
+      <path d="M40,32 v-6 M68,32 v-6" stroke="#8fa4ff" stroke-width="2.6" stroke-linecap="round"/>
+      <path d="M42,40 a2.2,2.2 0 1 1 4.4,0 a2.2,2.2 0 1 1 -4.4,0" fill="#fff"/>
+      <path d="M62,40 a2.2,2.2 0 1 1 4.4,0 a2.2,2.2 0 1 1 -4.4,0" fill="#fff"/>
+      <path d="M38,51 h32 a7,7 0 0 1 7,7 v4 a7,7 0 0 1 -7,7 h-32 a7,7 0 0 1 -7,-7 v-4 a7,7 0 0 1 7,-7 z" fill="#7c9aff"/>
+    </svg>
+  </div>
+
+  <div class="logo">◆ Cloud Phone<small>ANDROID В ОБЛАКЕ</small></div>
+  <div class="sub">Подключение к облачному телефону</div>
+
+  <div class="auto" id="auto">
+    <div class="spin"></div>
+    <div>Открываем ваш телефон…</div>
+    <div class="srv" id="autoUrl"></div>
+    <div style="margin-top:14px"><span class="chg" onclick="setup()">сменить сервер</span></div>
+  </div>
+
+  <div class="card" id="card">
+    <label>Адрес noVNC (печатает server-скрипт launch.sh)
+      <input id="host" type="url" inputmode="url" autocomplete="off"
+             autocorrect="off" autocapitalize="none" spellcheck="false"
+             placeholder="http://192.168.1.100:6080/vnc.html">
+    </label>
+    <button id="go">Открыть Cloud Phone</button>
+    <div class="err" id="err">Введите полный адрес: http://<сервер>:6080/vnc.html</div>
+  </div>
+
+  <div class="note" id="ver">Cloud Phone · v?</div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const saved = localStorage.getItem('cp.server');
+const setup = /[?&]setup=1/.test(location.search);
+
+window.onCpBuild = b => { $('ver').textContent = 'Cloud Phone · v' + (b && b.versionName ? b.versionName : '?'); };
+
+function connect() {
+  let v = $('host').value.trim();
+  if (!/^https?:\/\//i.test(v)) { $('err').style.display = 'block'; return; }
+  $('err').style.display = 'none';
+  localStorage.setItem('cp.server', v);
+  location.href = v;
+}
+function setup() {
+  location.href = location.pathname + '?setup=1';
+}
+
+if (saved && !setup) {
+  $('host').value = saved;
+  $('autoUrl').textContent = saved;
+  $('auto').style.display = 'block';
+  $('card').style.display = 'none';
+  window.setTimeout(() => { location.href = saved; }, 350);
+} else if (saved) {
+  $('host').value = saved;
+}
+
+$('go').addEventListener('click', connect);
+$('host').addEventListener('keydown', e => { if (e.key === 'Enter') connect(); });
+</script>
+</body>
+</html>

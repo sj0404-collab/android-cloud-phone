@@ -28,10 +28,13 @@ chmod +x install_deps.sh launch.sh
 
 ## Android APK Launcher
 
-Grab the latest `cloud-phone-*.apk` from the **Build Cloud Phone APK** workflow / GitHub Releases — a signed Android wrapper with cover screen. It connects to the noVNC page of a running cloud-phone:
+Grab the latest `cloud-phone-*.apk` from the **Build Cloud Phone APK** workflow / GitHub Releases. The app is a **WebView shell in the same shape as the zen-panel NPM Hub APK**: no native buttons. A connect page (served from inside the APK, `android/app/src/main/assets/connect/index.html`) holds the server address and sends the WebView to the phone:
 
-1. Set the server address (Settings → Сервер): `http://<host>:6080/vnc.html`
-2. Tap **Запустить** — full-screen noVNC client, touch/keyboard support, black immersive UI.
+1. First run shows the connect page → enter `http://<host>:6080/vnc.html` → **Открыть Cloud Phone**
+2. The address is remembered: next launches open the phone directly (progress bar, no extra taps)
+3. On a failed connection the app shows a dark error page with **Повторить** / **Сменить сервер**
+
+Chrome is a top progress bar + error page only; touch, file uploads and downloads work inside the noVNC page.
 
 ### Auto-build (same pipeline as zen-panel hub-apk)
 

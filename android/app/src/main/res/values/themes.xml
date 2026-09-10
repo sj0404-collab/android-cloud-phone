@@ -1,19 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.CloudPhone" parent="Theme.Material3.Dark.NoActionBar">
-        <item name="android:statusBarColor">@android:color/transparent</item>
-        <item name="android:navigationBarColor">#0B1026</item>
+    <style name="Theme.CloudPhone" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">#0d0d12</item>
+        <item name="android:statusBarColor">#0d0d12</item>
+        <item name="android:navigationBarColor">#0d0d12</item>
         <item name="android:windowLightStatusBar">false</item>
-        <item name="colorPrimary">#5D79FF</item>
-        <item name="colorOnPrimary">#FFFFFF</item>
-    </style>
-
-    <style name="Theme.CloudPhone.Fullscreen">
-        <item name="android:windowFullscreen">true</item>
-    </style>
-
-    <style name="RoundedCover">
-        <item name="cornerFamily">rounded</item>
-        <item name="cornerSize">28dp</item>
     </style>
 </resources>

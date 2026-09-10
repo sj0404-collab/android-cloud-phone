@@ -49,8 +49,10 @@ val storePass = System.getenv("ANDROID_KEYSTORE_PASSWORD").orEmpty().ifBlank { "
 }
 
 dependencies {
-    implementation("androidx.appcompat:appcompat:1.7.0")
-    implementation("com.google.android.material:material:1.12.0")
-    implementation("androidx.webkit:webkit:1.12.1")
-    implementation("androidx.preference:preference:1.2.1")
+    implementation("androidx.activity:activity:1.9.2")
+    constraints {
+        implementation("org.jetbrains.kotlin:kotlin-stdlib:1.8.22")
+        implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.8.22")
+        implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.8.22")
+    }
 }
