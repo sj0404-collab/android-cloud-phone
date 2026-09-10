@@ -4,6 +4,4 @@ build/
 app/build/
 *.apk
 *.idsig
-*.jks
-*.keystore
 .idea/

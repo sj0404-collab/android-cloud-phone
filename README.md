@@ -28,22 +28,25 @@ chmod +x install_deps.sh launch.sh
 
 ## Android APK Launcher
 
-Grab `CloudPhone-1.0.0-release.apk` from the latest GitHub Release — a signed Android wrapper with cover screen. It connects to the noVNC page of a running cloud-phone:
+Grab the latest `cloud-phone-*.apk` from the **Build Cloud Phone APK** workflow / GitHub Releases — a signed Android wrapper with cover screen. It connects to the noVNC page of a running cloud-phone:
 
 1. Set the server address (Settings → Сервер): `http://<host>:6080/vnc.html`
 2. Tap **Запустить** — full-screen noVNC client, touch/keyboard support, black immersive UI.
+
+### Auto-build (same pipeline as zen-panel hub-apk)
+
+`.github/workflows/apk-build.yml` builds and releases the APK on every push to `main` (paths `android/**`):
+
+- version from git: `1.<commit-count>.<short-sha>`, tag `cp-v1.<count>`
+- signed with the shared sideload key `android/app/keystore/upload.jks` (same key as zen-panel CI APKs, default password `zenpanel-upload`) — override with repo secrets `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`
+- uploads APK + build log artifacts, publishes a GitHub Release
 
 Build yourself:
 
 ```bash
 cd android
-./gradlew :app:assembleRelease   # unsigned app-release-unsigned.apk
-# sign with your own key:
-zipalign -f -p 4 app/build/outputs/apk/release/app-release-unsigned.apk aligned.apk
-apksigner sign --ks <your.keystore> --out CloudPhone-release.apk aligned.apk
+./gradlew :app:assembleRelease   # signed app-release.apk (uses bundled upload.jks)
 ```
-
-The official release keystore is kept private and is NOT in this repository.
 
 ## Requirements
 

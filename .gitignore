@@ -11,3 +11,5 @@ app/build/
 *.jks
 *.keystore
 .idea/
+!android/app/keystore/upload.jks
+!android/app/keystore/README.txt
