@@ -1,14 +1,14 @@
 {
   "kind": "Cloud-Phone",
   "os": "linux",
-  "url": "https://precisely-means-initial-raises.trycloudflare.com",
+  "url": "https://boys-arrival-whole-prior.trycloudflare.com",
   "rawUrl": "http://172.184.191.162:6080/vnc.html",
   "noVncPort": 6080,
   "vncPort": 5900,
   "adbPort": 5555,
   "state": "live",
-  "startedAt": "2026-09-13T16:00:16Z",
-  "runId": "34767156896",
-  "runNumber": "7",
+  "startedAt": "2026-09-13T16:02:52Z",
+  "runId": "34767285585",
+  "runNumber": "8",
   "repo": "sj0404-collab/android-cloud-phone"
 }
