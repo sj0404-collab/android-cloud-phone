@@ -170,12 +170,19 @@ start_emulator() {
   log "Starting Android emulator ($RESOLUTION)..."
   export DISPLAY=$DISPLAY_NUM
   export ANDROID_SDK_ROOT="$SDK_ROOT"
+  # Route emulator audio into the hub's cloud_phone Pulse sink so the panel
+  # can hear the phone (pulse module-null-sink + loopback are created by hub).
+  export PULSE_SINK="${CLOUD_PHONE_SINK:-cloud_phone}"
+  export QEMU_AUDIO_DRV="${QEMU_AUDIO_DRV:-alsa}"
+  # ALSA is forwarded to PulseAudio via ~/.asoundrc (type pulse), so phone
+  # sound lands on the hub's cloud_phone sink; set QEMU_AUDIO_DRV=none to
+  # disable sound entirely.
 
   # Ensure KVM access
   if [ -w /dev/kvm ] 2>/dev/null; then
     :
   elif command -v sg >/dev/null; then
-    sg kvm -c "$EMULATOR -avd $AVD_NAME -no-audio \
+    sg kvm -c "$EMULATOR -avd $AVD_NAME \
       -gpu swiftshader_indirect -feature -Vulkan -no-boot-anim -no-snapshot \
       -port 5554 -skin $RESOLUTION" &>/dev/null &
     sleep 2
@@ -184,7 +191,7 @@ start_emulator() {
     warn "No KVM access, emulator may be slow"
   fi
 
-  $EMULATOR -avd $AVD_NAME -no-audio \
+  $EMULATOR -avd $AVD_NAME \
     -gpu swiftshader_indirect -feature -Vulkan -no-boot-anim -no-snapshot \
     -port 5554 -skin $RESOLUTION &>/dev/null &
   sleep 2
