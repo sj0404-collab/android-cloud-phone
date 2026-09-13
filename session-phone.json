@@ -1,0 +1,14 @@
+{
+  "kind": "Cloud-Phone",
+  "os": "linux",
+  "url": "https://electric-creative-briefly-teaches.trycloudflare.com",
+  "rawUrl": "http://172.184.191.162:6080/vnc.html",
+  "noVncPort": 6080,
+  "vncPort": 5900,
+  "adbPort": 5555,
+  "state": "live",
+  "startedAt": "2026-09-13T14:52:59Z",
+  "runId": "34763846322",
+  "runNumber": "3",
+  "repo": "sj0404-collab/android-cloud-phone"
+}
