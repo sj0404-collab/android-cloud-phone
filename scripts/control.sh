@@ -57,7 +57,7 @@ start() {
 
 stop() {
   systemctl stop cloud-phone 2>/dev/null || true
-  pkill -f "emulator.*phone" 2>/dev/null || true
+  pkill -f "qemu-system.*phone" 2>/dev/null || true
   pkill -f "websockify.*$PORT_NOVNC" 2>/dev/null || true
   pkill -f "x11vnc.*$DISPLAY_NUM" 2>/dev/null || true
   pkill -f "Xvfb $DISPLAY_NUM" 2>/dev/null || true

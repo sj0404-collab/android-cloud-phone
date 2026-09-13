@@ -67,7 +67,7 @@ stop_old() {
   pkill -f "Xvfb $DISPLAY_NUM" 2>/dev/null || true
   pkill -f "x11vnc.*display.*$DISPLAY_NUM" 2>/dev/null || true
   pkill -f "websockify.*$NOVNC_PORT" 2>/dev/null || true
-  pkill -f "emulator.*$AVD_NAME" 2>/dev/null || true
+  pkill -f "qemu-system.*$AVD_NAME" 2>/dev/null || true
   sleep 1
 }
 
@@ -295,6 +295,6 @@ open_browser
 print_summary
 
 echo "Press Ctrl+C to shut down"
-trap 'echo ""; log "Shutting down..."; pkill -f "emulator.*$AVD_NAME" 2>/dev/null; pkill -f x11vnc 2>/dev/null; pkill -f websockify 2>/dev/null; pkill -f "Xvfb $DISPLAY_NUM" 2>/dev/null; log "Done"; exit 0' INT TERM
+trap 'echo ""; log "Shutting down..."; pkill -f "qemu-system.*$AVD_NAME" 2>/dev/null; pkill -f x11vnc 2>/dev/null; pkill -f websockify 2>/dev/null; pkill -f "Xvfb $DISPLAY_NUM" 2>/dev/null; log "Done"; exit 0' INT TERM
 
 wait
