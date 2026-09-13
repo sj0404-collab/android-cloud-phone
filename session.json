@@ -1,0 +1,14 @@
+{
+  "kind": "Cloud-Phone",
+  "os": "linux",
+  "url": "https://mathematics-intensive-dates-situated.trycloudflare.com",
+  "rawUrl": "http://172.184.191.162:6080/vnc.html",
+  "noVncPort": "6080",
+  "vncPort": "5900",
+  "adbPort": "5555",
+  "startedAt": "2026-09-13T14:47:11Z",
+  "state": "live",
+  "runId": "34762932893",
+  "runNumber": "1",
+  "repo": "sj0404-collab/android-cloud-phone"
+}
