@@ -1,14 +1,14 @@
 {
   "kind": "Cloud-Phone",
   "os": "linux",
-  "url": "https://mathematics-intensive-dates-situated.trycloudflare.com",
+  "url": "https://performed-payments-apartment-whale.trycloudflare.com",
   "rawUrl": "http://172.184.191.162:6080/vnc.html",
   "noVncPort": "6080",
   "vncPort": "5900",
   "adbPort": "5555",
-  "startedAt": "2026-09-13T14:47:11Z",
+  "startedAt": "2026-09-13T14:49:42Z",
   "state": "live",
-  "runId": "34762932893",
-  "runNumber": "1",
+  "runId": "34763657305",
+  "runNumber": "2",
   "repo": "sj0404-collab/android-cloud-phone"
 }
