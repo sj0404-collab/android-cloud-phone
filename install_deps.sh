@@ -12,6 +12,9 @@ SDK_ROOT="${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}"
 SDKMANAGER="$SDK_ROOT/cmdline-tools/latest/bin/sdkmanager"
 
 log "Installing system packages..."
+# libasound2 is virtual on Ubuntu 24.04 → use libasound2t64 when present.
+ASOUND="libasound2"
+apt-cache policy libasound2t64 2>/dev/null | grep -q Candidate && ASOUND="libasound2t64"
 sudo apt-get update -qq
 sudo apt-get install -y -qq \
   xvfb x11vnc novnc websockify \
@@ -20,8 +23,7 @@ sudo apt-get install -y -qq \
   libegl1 libgles2 libglu1-mesa \
   libpulse0 libnss3 libatk-bridge2.0-0 \
   libdrm2 libxkbcommon0 libxcomposite1 libxdamage1 \
-  libxrandr2 libgbm1 libpango-1.0-0 libcairo2 libasound2 \
-  2>/dev/null
+  libxrandr2 libgbm1 libpango-1.0-0 libcairo2 "$ASOUND"
 
 # ── Android SDK ──────────────────────────────────────
 if [ ! -d "$SDK_ROOT" ]; then
