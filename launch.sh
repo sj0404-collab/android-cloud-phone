@@ -82,7 +82,10 @@ start_xvfb() {
 
 start_vnc() {
   log "Starting x11vnc on port $VNC_PORT..."
-  x11vnc -display $DISPLAY_NUM -nopw -forever -shared -bg -rfbport $VNC_PORT 2>/dev/null
+  # Perf flags for low-CPU headless runners: -nodri -noshm offload the copy,
+  # -copyrect reuses unchanged screen regions, tight-ish quality keeps FPS up.
+  x11vnc -display $DISPLAY_NUM -nopw -forever -shared -bg -rfbport $VNC_PORT \
+    -noxdamage -nodri -noshm -copyrect -quality 6 -compresslevel 6 2>/dev/null
   log "x11vnc started"
 }
 
@@ -206,12 +209,24 @@ wait_for_boot() {
     boot=$($ADB shell getprop sys.boot_completed 2>/dev/null | tr -d '\r\n')
     if [ "$boot" = "1" ]; then
       log "Android booted!"
+      dismiss_anr
       return
     fi
     printf "\r  Booting... %d/60" "$i"
     sleep 2
   done
   warn "Boot timeout — Android may still be starting"
+}
+
+# Auto-dismiss ANR / SystemUI dialogs that block the screen after boot
+# ("System UI isn't responding" → tap the "Close app" button on 1080x2400).
+dismiss_anr() {
+  log "Dismissing possible ANR/SystemUI dialogs..."
+  for i in $(seq 1 5); do
+    $ADB shell input tap 540 1273 2>/dev/null || true
+    sleep 2
+  done
+  log "ANR check done"
 }
 
 open_browser() {
