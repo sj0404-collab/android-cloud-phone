@@ -158,6 +158,7 @@ hw.lcd.density=320
 hw.lcd.height=1520
 hw.lcd.width=720
 hw.ramSize=4096
+hw.cpu.ncore=4
 hw.keyboard=yes
 hw.gpu.enabled=yes
 hw.gpu.mode=host
