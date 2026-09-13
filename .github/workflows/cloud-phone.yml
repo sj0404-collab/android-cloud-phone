@@ -99,12 +99,10 @@ jobs:
 
           echo "TUNNEL=$TUNNEL" >> "$GITHUB_OUTPUT"
 
-          # Publish to session-state branch (slot=phone) so the hub can read it
-          # Reuse publish_session.sh from the zen-panel repo if available
+          # Publish to session-state branch (slot=phone) so the hub can read it.
+          # Prefer reusing publish_session.sh from the zen-panel repo when the
+          # workspace carries it; otherwise write session-phone.json directly.
           SCRIPT_PATH=$(find "$GITHUB_WORKSPACE" -name publish_session.sh -path "*/zen-panel/*" 2>/dev/null | head -1)
-          if [ -z "$SCRIPT_PATH" ]; then
-            SCRIPT_PATH=$(find / -maxdepth 6 -name publish_session.sh -path "*/zen-panel/*" 2>/dev/null | head -1)
-          fi
           if [ -n "$SCRIPT_PATH" ] && [ -x "$SCRIPT_PATH" ]; then
             GH_TOKEN="$GH_TOKEN" bash "$SCRIPT_PATH" \
               slot=phone \
