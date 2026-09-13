@@ -12,14 +12,19 @@ on:
           - start
           - stop
           - status
-      auto_connect:
-        description: 'Auto-open the noVNC site in the runner browser (needs a graphical DISPLAY)'
+      runner:
+        description: 'Runner label for the emulator (set to the emulator runner name)'
         required: false
-        default: true
-        type: boolean
+        default: 'emulator'
+        type: string
+      browser_url:
+        description: 'URL to open in the emulator browser after boot (hub remote mode)'
+        required: false
+        default: ''
+        type: string
 
 permissions:
-  contents: read
+  contents: write
   actions: write
 
 concurrency:
@@ -28,7 +33,7 @@ concurrency:
 
 jobs:
   phone:
-    runs-on: [self-hosted, linux, x64]
+    runs-on: ${{ inputs.runner || 'emulator' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -39,40 +44,177 @@ jobs:
           CMD: ${{ inputs.command }}
         run: |
           chmod +x launch.sh scripts/control.sh
-          bash scripts/control.sh "$CMD" | tee /tmp/control.out
-          echo "URL=$(grep -oE 'http://[^ ]+' /tmp/control.out | head -1)" >> "$GITHUB_OUTPUT"
+          bash scripts/control.sh "$CMD" 2>&1 | tee /tmp/control.out
+          URL=$(grep -oE 'http://[^ ]+' /tmp/control.out | head -1)
+          echo "URL=$URL" >> "$GITHUB_OUTPUT"
+          echo "CONTROL_OK=$([ -s /tmp/control.out ] && echo 1 || echo 0)" >> "$GITHUB_OUTPUT"
+
+      - name: Open URL in the emulator browser
+        if: inputs.command == 'start' && inputs.browser_url != ''
+        env:
+          BROWSE: ${{ inputs.browser_url }}
+        run: |
+          ADB=/usr/local/lib/android/sdk/platform-tools/adb
+          if [ ! -x "$ADB" ]; then
+            echo "::warning::adb not found; cannot open URL"
+            exit 0
+          fi
+          echo "Waiting for boot to open: ${BROWSE}"
+          for i in $(seq 1 60); do
+            if [ "$("$ADB" shell getprop sys.boot_completed 2>/dev/null | tr -d '\r\n')" = "1" ]; then break; fi
+            sleep 3
+          done
+          "$ADB" shell am start -a android.intent.action.VIEW -d "$BROWSE" 2>/dev/null || true
+          echo "Browser intent sent: $BROWSE"
+
+      - name: Publish live URL to session-state
+        if: inputs.command == 'start' && steps.control.outputs.URL != ''
+        env:
+          URL: ${{ steps.control.outputs.URL }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
+        run: |
+          # Open a cloudflared tunnel so the phone is accessible outside the runner
+          if ! command -v cloudflared >/dev/null 2>&1; then
+            CF_URL="https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64"
+            sudo curl -fsSL "$CF_URL" -o /usr/local/bin/cloudflared
+            sudo chmod +x /usr/local/bin/cloudflared
+          fi
+
+          # If phone is on local ports, open a tunnel for 6080 (noVNC)
+          TUNNEL_LOG=/tmp/cf-phone.log
+          cloudflared tunnel --url http://localhost:6080 --no-autoupdate --loglevel info \
+            >"$TUNNEL_LOG" 2>&1 &
+          CF_PID=$!
+          TUNNEL=""
+          for i in $(seq 1 40); do
+            sleep 2
+            TUNNEL=$(grep -oE 'https://[a-z0-9-]+\.trycloudflare\.com' "$TUNNEL_LOG" 2>/dev/null | head -1)
+            [ -n "$TUNNEL" ] && break
+          done
+
+          if [ -z "$TUNNEL" ]; then
+            echo "::warning::No tunnel detected, using raw URL ${URL}"
+            TUNNEL="$URL"
+          fi
+
+          echo "TUNNEL=$TUNNEL" >> "$GITHUB_OUTPUT"
+
+          # Publish to session-state branch (slot=phone) so the hub can read it
+          # Reuse publish_session.sh from the zen-panel repo if available
+          SCRIPT_PATH=$(find "$GITHUB_WORKSPACE" -name publish_session.sh -path "*/zen-panel/*" 2>/dev/null | head -1)
+          if [ -z "$SCRIPT_PATH" ]; then
+            SCRIPT_PATH=$(find / -maxdepth 6 -name publish_session.sh -path "*/zen-panel/*" 2>/dev/null | head -1)
+          fi
+          if [ -n "$SCRIPT_PATH" ] && [ -x "$SCRIPT_PATH" ]; then
+            GH_TOKEN="$GH_TOKEN" bash "$SCRIPT_PATH" \
+              slot=phone \
+              "kind=Cloud-Phone" "os=linux" \
+              "url=$TUNNEL" "rawUrl=$URL" \
+              "noVncPort=6080" "vncPort=5900" "adbPort=5555"
+          else
+            # Fallback: publish directly to session-state branch
+            BRANCH="session-state"
+            FILE="session-phone.json"
+            STAGE=$(mktemp /tmp/session-phone.XXXXXX.json)
+            cat > "$STAGE" << JSONEOF
+          {
+            "kind": "Cloud-Phone",
+            "os": "linux",
+            "url": "$TUNNEL",
+            "rawUrl": "$URL",
+            "noVncPort": 6080,
+            "vncPort": 5900,
+            "adbPort": 5555,
+            "state": "live",
+            "startedAt": "$(date -u '+%Y-%m-%dT%H:%M:%SZ')",
+            "runId": "$GITHUB_RUN_ID",
+            "runNumber": "$GITHUB_RUN_NUMBER",
+            "repo": "$GITHUB_REPOSITORY"
+          }
+          JSONEOF
+            WORK=$(mktemp -d)
+            REMOTE="https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+            ( cd "$WORK"
+              if git clone -q --depth 1 --branch "$BRANCH" "$REMOTE" state 2>/dev/null; then
+                cd state
+              else
+                git clone -q --depth 1 "$REMOTE" state && cd state && git checkout -q --orphan "$BRANCH" && git rm -rqf . 2>/dev/null || true
+              fi
+              cp "$STAGE" "$FILE"
+              git config user.email "cloud-phone@runner"
+              git config user.name  "Cloud Phone"
+              git add "$FILE"
+              git diff --cached --quiet || git commit -q -m "session $(date -u '+%Y-%m-%d %H:%M:%S')"
+              git push -q origin "HEAD:$BRANCH" 2>/dev/null || true
+            )
+            rm -rf "$WORK" "$STAGE"
+          fi
+
+          # Pin URL on the run so it's visible in the Actions UI
+          gh api "/repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
+            --method PATCH --field name="Cloud Phone: $TUNNEL" >/dev/null 2>&1 || true
 
       - name: Auto-connect to site
         if: inputs.command == 'start'
         env:
           URL: ${{ steps.control.outputs.URL }}
-          GHTOK: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
         run: |
           {
             echo "## 🌐 Cloud Phone is live"
             echo ""
             echo "- **noVNC**: [${URL:?no URL detected}](${URL})"
+            echo "- **Tunnel**: [${{ steps.control.outputs.URL }}](${{ steps.control.outputs.URL }})"
             echo "- **VNC**: port 5900 · **ADB**: port 5555"
           } >> "$GITHUB_STEP_SUMMARY"
 
-          # auto-open in the runner's own browser if a GUI is present
-          if [ "${{ inputs.auto_connect }}" = "true" ] && [ -n "${DISPLAY:-}" ] && command -v xdg-open >/dev/null; then
-            xdg-open "$URL" || true
-          fi
-
-          # verify the site responds
-          if curl -sf --max-time 10 "$URL" >/dev/null; then
+          if [ -n "${URL:-}" ] && curl -sf --max-time 15 "$URL" >/dev/null; then
             echo "✓ Site reachable"
           else
-            echo "! Site not reachable yet (emulator still booting)"
+            echo "! Site not reachable yet (emulator may still be booting)"
           fi
 
-      - name: Pin URL on the run
-        if: inputs.command == 'start'
+      - name: Publish stopped status
+        if: inputs.command == 'stop'
         env:
-          URL: ${{ steps.control.outputs.URL }}
           GH_TOKEN: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
         run: |
+          BRANCH="session-state"
+          FILE="session-phone.json"
+          STAGE=$(mktemp /tmp/session-phone.XXXXXX.json)
+          cat > "$STAGE" << JSONEOF
+          {
+            "kind": "Cloud-Phone",
+            "state": "ended",
+            "endedAt": "$(date -u '+%Y-%m-%dT%H:%M:%SZ')",
+            "runId": "$GITHUB_RUN_ID",
+            "repo": "$GITHUB_REPOSITORY"
+          }
+          JSONEOF
+          WORK=$(mktemp -d)
+          REMOTE="https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          ( cd "$WORK"
+            if git clone -q --depth 1 --branch "$BRANCH" "$REMOTE" state 2>/dev/null; then
+              cd state
+            else
+              exit 0
+            fi
+            OWNER_RUN=$(python3 -c "
+          import json,sys
+          try:
+              print(json.load(open('$FILE')).get('runId',''))
+          except:
+              print('')
+          " 2>/dev/null || true)
+            if [ -n "$OWNER_RUN" ] && [ "$OWNER_RUN" != "${GITHUB_RUN_ID:-}" ]; then
+              exit 0
+            fi
+            cp "$STAGE" "$FILE"
+            git config user.email "cloud-phone@runner"
+            git config user.name  "Cloud Phone"
+            git add "$FILE"
+            git diff --cached --quiet || git commit -q -m "session $(date -u '+%Y-%m-%d %H:%M:%S')"
+            git push -q origin "HEAD:$BRANCH" 2>/dev/null || true
+          )
+          rm -rf "$WORK" "$STAGE"
           gh api "/repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
-            --method PATCH --field name="Cloud Phone: ${URL}" >/dev/null
-          echo "Run renamed to: Cloud Phone: ${URL}"
+            --method PATCH --field name="Cloud Phone: stopped" >/dev/null 2>&1 || true
