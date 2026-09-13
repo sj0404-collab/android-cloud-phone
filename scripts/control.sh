@@ -30,9 +30,19 @@ start() {
   fi
 
   cd "$ROOT"
-  setsid nohup bash launch.sh >> "$LOGFILE" 2>&1 &
-  echo $! > "$PIDFILE"
-  echo "Cloud Phone started (pid $(cat "$PIDFILE")). Log: $LOGFILE"
+  # Run the emulator in a transient systemd unit so it survives the GitHub
+  # Actions job ending: the runner reaps every child of the job's cgroup, and
+  # a plain `setsid nohup` still dies with it. systemd-run detaches us.
+  if command -v systemd-run >/dev/null 2>&1; then
+    systemd-run --collect --unit=cloud-phone --setenv=HOME="$HOME" \
+      bash launch.sh >> "$LOGFILE" 2>&1
+    # systemd-run returns immediately; hand it a fresh pid marker.
+    echo "Cloud Phone started via systemd (unit cloud-phone). Log: $LOGFILE"
+  else
+    setsid nohup bash launch.sh >> "$LOGFILE" 2>&1 &
+    echo $! > "$PIDFILE"
+    echo "Cloud Phone started (pid $(cat "$PIDFILE")). Log: $LOGFILE"
+  fi
 
   for i in $(seq 1 60); do
     if curl -sf --max-time 2 "http://localhost:$PORT_NOVNC" >/dev/null 2>&1; then
@@ -45,10 +55,12 @@ start() {
 }
 
 stop() {
+  systemctl stop cloud-phone 2>/dev/null || true
   pkill -f "emulator.*phone" 2>/dev/null || true
   pkill -f "websockify.*$PORT_NOVNC" 2>/dev/null || true
   pkill -f "x11vnc.*$DISPLAY_NUM" 2>/dev/null || true
   pkill -f "Xvfb $DISPLAY_NUM" 2>/dev/null || true
+  systemctl reset-failed cloud-phone 2>/dev/null || true
   rm -f "$PIDFILE"
   echo "Cloud Phone stopped"
 }
