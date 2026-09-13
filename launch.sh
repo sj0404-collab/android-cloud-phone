@@ -127,7 +127,7 @@ create_avd() {
     err "No x86_64 system image found. Install one: sdkmanager 'system-images;android-34;default;x86_64'"
   fi
 
-  if [ -f "$avd_dir/config.ini" ] && [ -f "$avd_dir/system.img" ]; then
+  if [ -f "$avd_dir/config.ini" ] && grep -q "^image.sysdir.1=$(realpath "$img_dir")/" "$avd_dir/config.ini" && [ -f "$avd_dir/system.img" ]; then
     log "AVD '$AVD_NAME' already exists"
     return
   fi
@@ -158,7 +158,7 @@ hw.ramSize=4096
 hw.keyboard=yes
 hw.gpu.enabled=yes
 hw.gpu.mode=host
-image.sysdir.1=$(realpath --relative-to="$avd_dir" "$img_dir")/
+image.sysdir.1=$(realpath "$img_dir")/
 CFG
 
   for f in kernel-ranchu ramdisk.img system.img vendor.img userdata.img \
@@ -188,12 +188,23 @@ start_emulator() {
   export GALLIUM_DRIVER=llvmpipe
   export EGL_PLATFORM=x11
 
+  # Never show the interactive crash/consent dialog on a headless runner.
+  export ANDROID_EMU_DISABLE_CRASH_REPORTING=1
+  export ANDROID_EMU_ENABLE_CRASH_REPORTING=0
+  export CRASH_UPLOAD=no
+
+  EXTRA_ARGS=""
+  if [ ! -w /dev/kvm ] 2>/dev/null; then
+    warn "No KVM access — emulator will be slow (software x86 → SwiftShader)"; 
+  fi
+
   # Ensure KVM access
   if [ -w /dev/kvm ] 2>/dev/null; then
     :
   elif command -v sg >/dev/null; then
     sg kvm -c "$EMULATOR -avd $AVD_NAME \
-      -gpu host -feature -Vulkan -no-boot-anim -no-snapshot \
+      -gpu host -feature -Vulkan -no-boot-anim -no-snapshot -no-metrics \
+      -crash-report-mode disabled \
       -port 5554 -skin $RESOLUTION" &>/dev/null &
     sleep 2
     return
@@ -202,7 +213,8 @@ start_emulator() {
   fi
 
   $EMULATOR -avd $AVD_NAME \
-    -gpu host -feature -Vulkan -no-boot-anim -no-snapshot \
+    -gpu host -feature -Vulkan -no-boot-anim -no-snapshot -no-metrics \
+    -crash-report-mode disabled \
     -port 5554 -skin $RESOLUTION &>/dev/null &
   sleep 2
 }
