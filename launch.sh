@@ -157,7 +157,7 @@ hw.lcd.width=1080
 hw.ramSize=4096
 hw.keyboard=yes
 hw.gpu.enabled=yes
-hw.gpu.mode=swiftshader_indirect
+hw.gpu.mode=host
 image.sysdir.1=$(realpath --relative-to="$avd_dir" "$img_dir")/
 CFG
 
@@ -181,12 +181,19 @@ start_emulator() {
   # sound lands on the hub's cloud_phone sink; set QEMU_AUDIO_DRV=none to
   # disable sound entirely.
 
+  # Render through Mesa (host GL / llvmpipe softpipe) instead of SwiftShader:
+  # -gpu host on a GPU-less runner falls back to Mesa's llvmpipe, which keeps
+  # more of Android's GLES/GL paths working than SwiftShader's GL2 wrapper.
+  export LIBGL_ALWAYS_SOFTWARE=1
+  export GALLIUM_DRIVER=llvmpipe
+  export EGL_PLATFORM=x11
+
   # Ensure KVM access
   if [ -w /dev/kvm ] 2>/dev/null; then
     :
   elif command -v sg >/dev/null; then
     sg kvm -c "$EMULATOR -avd $AVD_NAME \
-      -gpu swiftshader_indirect -feature -Vulkan -no-boot-anim -no-snapshot \
+      -gpu host -feature -Vulkan -no-boot-anim -no-snapshot \
       -port 5554 -skin $RESOLUTION" &>/dev/null &
     sleep 2
     return
@@ -195,7 +202,7 @@ start_emulator() {
   fi
 
   $EMULATOR -avd $AVD_NAME \
-    -gpu swiftshader_indirect -feature -Vulkan -no-boot-anim -no-snapshot \
+    -gpu host -feature -Vulkan -no-boot-anim -no-snapshot \
     -port 5554 -skin $RESOLUTION &>/dev/null &
   sleep 2
 }

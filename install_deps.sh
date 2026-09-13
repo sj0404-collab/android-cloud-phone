@@ -16,7 +16,9 @@ sudo apt-get update -qq
 sudo apt-get install -y -qq \
   xvfb x11vnc novnc websockify \
   curl wget unzip \
-  libgl1-mesa-dri libpulse0 libnss3 libatk-bridge2.0-0 \
+  mesa-utils libgl1-mesa-dri libgl1 \
+  libegl1 libgles2 libglu1-mesa \
+  libpulse0 libnss3 libatk-bridge2.0-0 \
   libdrm2 libxkbcommon0 libxcomposite1 libxdamage1 \
   libxrandr2 libgbm1 libpango-1.0-0 libcairo2 libasound2 \
   2>/dev/null
