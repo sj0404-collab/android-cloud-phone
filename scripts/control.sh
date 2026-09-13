@@ -35,7 +35,8 @@ start() {
   # a plain `setsid nohup` still dies with it. systemd-run detaches us.
   if command -v systemd-run >/dev/null 2>&1; then
     systemd-run --collect --unit=cloud-phone --setenv=HOME="$HOME" \
-      bash launch.sh >> "$LOGFILE" 2>&1
+      --working-directory="$ROOT" \
+      bash "$ROOT/launch.sh" >> "$LOGFILE" 2>&1
     # systemd-run returns immediately; hand it a fresh pid marker.
     echo "Cloud Phone started via systemd (unit cloud-phone). Log: $LOGFILE"
   else
