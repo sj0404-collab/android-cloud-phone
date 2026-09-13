@@ -1,14 +1,14 @@
 {
   "kind": "Cloud-Phone",
   "os": "linux",
-  "url": "https://lectures-thinks-lie-night.trycloudflare.com",
+  "url": "https://like-webpage-suspended-ips.trycloudflare.com",
   "rawUrl": "http://172.184.191.162:6080/vnc.html",
   "noVncPort": 6080,
   "vncPort": 5900,
   "adbPort": 5555,
   "state": "live",
-  "startedAt": "2026-09-13T15:03:40Z",
-  "runId": "34764348670",
-  "runNumber": "5",
+  "startedAt": "2026-09-13T15:46:06Z",
+  "runId": "34766437147",
+  "runNumber": "6",
   "repo": "sj0404-collab/android-cloud-phone"
 }
