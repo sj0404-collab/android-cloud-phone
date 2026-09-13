@@ -18,7 +18,10 @@ AVD_NAME="phone"
 DISPLAY_NUM=":99"
 VNC_PORT=5900
 NOVNC_PORT=6080
-RESOLUTION="1080x2400"
+# 720x1520 keeps FPS comfortably high under software rendering (llvmpipe,
+# no GPU on the runner): 1080x2400 sustained only ~7-15 fps while 720x1520
+# renders ~2.2x fewer pixels. See CLOUD_PHONE_TODO.md (optimization #4).
+RESOLUTION="720x1520"
 
 banner() {
   echo -e "${CYAN}"
@@ -151,9 +154,9 @@ disk.dataPartition.size=2G
 hw.cpu.arch=x86_64
 hw.device.name=pixel_7
 hw.device.manufacturer=Google
-hw.lcd.density=420
-hw.lcd.height=2400
-hw.lcd.width=1080
+hw.lcd.density=320
+hw.lcd.height=1520
+hw.lcd.width=720
 hw.ramSize=4096
 hw.keyboard=yes
 hw.gpu.enabled=yes
