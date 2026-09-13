@@ -85,7 +85,7 @@ start_vnc() {
   # Perf flags for low-CPU headless runners: -nodri -noshm offload the copy,
   # -copyrect reuses unchanged screen regions, tight-ish quality keeps FPS up.
   x11vnc -display $DISPLAY_NUM -nopw -forever -shared -bg -rfbport $VNC_PORT \
-    -noxdamage -nodri -noshm -copyrect -quality 6 -compresslevel 6 2>/dev/null
+    -noxdamage -wirecopyrect top 2>/dev/null
   log "x11vnc started"
 }
 
